@@ -7,7 +7,7 @@ import aiohttp
 from aioresponses import aioresponses
 
 from pyopus_smarthome.client import OpusClient
-from pyopus_smarthome.models import Device, Gateway
+from pyopus_smarthome.models import Device, DeviceConfiguration, Gateway
 from pyopus_smarthome.exceptions import OpusConnectionError, OpusAuthError, OpusApiError
 
 HOST = "192.168.1.1"
@@ -210,12 +210,26 @@ async def test_500_raises_opus_api_error(client):
 
 
 @pytest.mark.asyncio
-async def test_get_device_configuration_returns_dict(client):
+async def test_get_device_configuration_returns_typed_configuration(client):
     device_id = "AABB0001"
     config_response = {
         "configuration": {
-            "channel": 1,
-            "powerLevel": 100,
+            "deviceId": device_id,
+            "friendlyId": "Living Room Shutter",
+            "parameters": [
+                {
+                    "key": "verticalMovementTime",
+                    "description": "Measured duration of a vertical run",
+                    "value": 120,
+                    "unit": "s",
+                },
+                {
+                    "key": "rotationTime",
+                    "description": "Measured duration of rotation",
+                    "value": 2,
+                    "unit": "s",
+                },
+            ],
         }
     }
     with aioresponses() as m:
@@ -226,7 +240,33 @@ async def test_get_device_configuration_returns_dict(client):
         result = await client.get_device_configuration(device_id)
         await client.close()
 
-    assert result == {"channel": 1, "powerLevel": 100}
+    assert isinstance(result, DeviceConfiguration)
+    assert result.device_id == device_id
+    assert result.get_parameter_value("verticalMovementTime") == 120
+    assert result.get_parameter_value("rotationTime") == 2
+
+
+@pytest.mark.asyncio
+async def test_set_device_configuration_parameter_sends_correct_put_body(client):
+    device_id = "AABB0001"
+    with aioresponses() as m:
+        m.put(
+            f"{BASE_URL}/devices/{device_id}/configuration",
+            payload={},
+            status=200,
+        )
+        await client.set_device_configuration_parameter(device_id, "rotationTime", 0)
+        await client.close()
+
+    request = m.requests[
+        ("PUT", aiohttp.client.URL(f"{BASE_URL}/devices/{device_id}/configuration"))
+    ][0]
+    sent_json = request.kwargs.get("json")
+    assert sent_json == {
+        "configuration": {
+            "parameters": [{"key": "rotationTime", "value": "0"}]
+        }
+    }
 
 
 @pytest.mark.asyncio

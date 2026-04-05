@@ -25,6 +25,57 @@ class DeviceState:
             meaning=data.get("meaning"),
         )
 
+
+@dataclass
+class DeviceConfigurationParameter:
+    key: str
+    value: object
+    description: str | None = None
+    unit: str | None = None
+    meaning: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> DeviceConfigurationParameter:
+        return cls(
+            key=data["key"],
+            value=data.get("value"),
+            description=data.get("description"),
+            unit=data.get("unit"),
+            meaning=data.get("meaning"),
+        )
+
+
+@dataclass
+class DeviceConfiguration:
+    device_id: str | None = None
+    friendly_id: str | None = None
+    last_update_time: str | None = None
+    parameters: list[DeviceConfigurationParameter] = field(default_factory=list)
+    _raw: dict = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> DeviceConfiguration:
+        return cls(
+            device_id=data.get("deviceId"),
+            friendly_id=data.get("friendlyId"),
+            last_update_time=data.get("lastUpdateTime"),
+            parameters=[
+                DeviceConfigurationParameter.from_dict(p)
+                for p in data.get("parameters", [])
+            ],
+            _raw=data,
+        )
+
+    def get_parameter(self, key: str) -> DeviceConfigurationParameter | None:
+        for parameter in self.parameters:
+            if parameter.key == key:
+                return parameter
+        return None
+
+    def get_parameter_value(self, key: str) -> object | None:
+        parameter = self.get_parameter(key)
+        return parameter.value if parameter is not None else None
+
 @dataclass
 class TelegramFunction:
     key: str
@@ -68,6 +119,7 @@ class Device:
     manufacturer: str | None = None
     product_id: str | None = None
     device_type: str | None = None
+    configuration: DeviceConfiguration | None = None
     operable: bool = True
     _raw: dict = field(default_factory=dict, repr=False)
 
@@ -82,6 +134,11 @@ class Device:
             manufacturer=data.get("manufacturer"),
             product_id=data.get("productId"),
             device_type=data.get("deviceType"),
+            configuration=(
+                DeviceConfiguration.from_dict(data["configuration"])
+                if data.get("configuration") is not None
+                else None
+            ),
             operable=data.get("operable", True),
             _raw=data,
         )
@@ -98,6 +155,27 @@ class Device:
                 s.value = value
                 return
         self.states.append(DeviceState(key=key, value=value))
+
+    def has_state(self, key: str) -> bool:
+        return self.get_state(key) is not None
+
+    def get_configuration_parameter(
+        self, key: str
+    ) -> DeviceConfigurationParameter | None:
+        if self.configuration is None:
+            return None
+        return self.configuration.get_parameter(key)
+
+    def get_configuration_parameter_value(self, key: str) -> object | None:
+        parameter = self.get_configuration_parameter(key)
+        return parameter.value if parameter is not None else None
+
+    @property
+    def supports_cover_tilt(self) -> bool:
+        return self.is_cover and (
+            self.has_state("angle")
+            or self.get_configuration_parameter("rotationTime") is not None
+        )
 
     @property
     def is_cover(self) -> bool:

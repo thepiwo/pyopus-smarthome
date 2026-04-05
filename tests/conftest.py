@@ -15,6 +15,25 @@ def roller_shutter_data():
             {"key": "angle", "value": 0.0, "unit": "%"},
             {"key": "lockingMode", "value": "unblock"},
         ],
+        "configuration": {
+            "lastUpdateTime": "2022-12-22T14:11:37.163+0100",
+            "deviceId": "AABB0001",
+            "friendlyId": "Test Shutter",
+            "parameters": [
+                {
+                    "key": "verticalMovementTime",
+                    "description": "Measured duration of a vertical run",
+                    "value": 120,
+                    "unit": "s",
+                },
+                {
+                    "key": "rotationTime",
+                    "description": "Measured duration of rotation",
+                    "value": 2,
+                    "unit": "s",
+                },
+            ],
+        },
         "operable": True,
         "supported": True,
     }

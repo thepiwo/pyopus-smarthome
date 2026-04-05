@@ -4,7 +4,7 @@ from __future__ import annotations
 import aiohttp
 
 from .auth import derive_admin_password
-from .models import Device, Gateway
+from .models import Device, DeviceConfiguration, Gateway
 from .exceptions import OpusConnectionError, OpusAuthError, OpusApiError
 
 
@@ -71,6 +71,19 @@ class OpusClient:
             body["roomName"] = room_name
         await self._request("POST", f"/devices/{device_id}", json=body)
 
-    async def get_device_configuration(self, device_id: str) -> dict:
+    async def get_device_configuration(self, device_id: str) -> DeviceConfiguration:
         data = await self._request("GET", f"/devices/{device_id}/configuration")
-        return data.get("configuration", {})
+        return DeviceConfiguration.from_dict(data.get("configuration", {}))
+
+    async def set_device_configuration_parameter(
+        self, device_id: str, key: str, value: object
+    ) -> None:
+        await self._request(
+            "PUT",
+            f"/devices/{device_id}/configuration",
+            json={
+                "configuration": {
+                    "parameters": [{"key": key, "value": str(value)}]
+                }
+            },
+        )
