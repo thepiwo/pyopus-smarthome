@@ -172,10 +172,14 @@ class Device:
 
     @property
     def supports_cover_tilt(self) -> bool:
-        return self.is_cover and (
-            self.has_state("angle")
-            or self.get_configuration_parameter("rotationTime") is not None
-        )
+        if not self.is_cover:
+            return False
+
+        rotation_time = self.get_configuration_parameter_value("rotationTime")
+        if rotation_time is not None:
+            return float(rotation_time) > 0
+
+        return self.has_state("angle")
 
     @property
     def is_cover(self) -> bool:

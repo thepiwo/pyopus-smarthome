@@ -20,6 +20,12 @@ def test_device_is_cover(roller_shutter_data):
     assert dev.supports_cover_tilt
     assert dev.get_configuration_parameter_value("verticalMovementTime") == 120
 
+
+def test_cover_does_not_support_tilt_when_rotation_time_is_zero(roller_shutter_data):
+    roller_shutter_data["configuration"]["parameters"][1]["value"] = 0
+    dev = Device.from_dict(roller_shutter_data)
+    assert not dev.supports_cover_tilt
+
 def test_device_is_climate(heating_zone_data):
     dev = Device.from_dict(heating_zone_data)
     assert dev.is_climate
