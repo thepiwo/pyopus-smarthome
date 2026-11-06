@@ -1,4 +1,5 @@
 from .client import OpusClient
+from .ezr import EzrActuator, EzrClient, EzrRoomUnit, EzrStatus, EzrZone
 from .stream import OpusStream
 from .models import (
     Device,
@@ -14,6 +15,7 @@ from .exceptions import OpusError, OpusConnectionError, OpusAuthError, OpusApiEr
 
 __all__ = [
     "OpusClient", "OpusStream",
+    "EzrClient", "EzrStatus", "EzrZone", "EzrActuator", "EzrRoomUnit",
     "Device", "DeviceConfiguration", "DeviceConfigurationParameter", "DeviceState",
     "Gateway", "Telegram", "TelegramFunction",
     "derive_admin_password", "derive_config_password", "parse_qr_code", "QRCredentials",

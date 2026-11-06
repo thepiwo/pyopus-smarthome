@@ -119,6 +119,7 @@ class Device:
     manufacturer: str | None = None
     product_id: str | None = None
     device_type: str | None = None
+    physical_device: str | None = None
     configuration: DeviceConfiguration | None = None
     operable: bool = True
     _raw: dict = field(default_factory=dict, repr=False)
@@ -134,6 +135,7 @@ class Device:
             manufacturer=data.get("manufacturer"),
             product_id=data.get("productId"),
             device_type=data.get("deviceType"),
+            physical_device=data.get("physicalDevice"),
             configuration=(
                 DeviceConfiguration.from_dict(data["configuration"])
                 if data.get("configuration") is not None
@@ -180,6 +182,18 @@ class Device:
             return float(rotation_time) > 0
 
         return self.has_state("angle")
+
+    @property
+    def heatarea_number(self) -> int | None:
+        """Möhlenhoff zone number of a heat area.
+
+        OPUS links each heat area to its controller zone as
+        ``physicalDevice = "<controller MAC>_<zone>"``.
+        """
+        if not self.physical_device or "_" not in self.physical_device:
+            return None
+        suffix = self.physical_device.rsplit("_", 1)[1]
+        return int(suffix) if suffix.isdigit() else None
 
     @property
     def is_cover(self) -> bool:

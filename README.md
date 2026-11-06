@@ -107,6 +107,42 @@ The library models the following device categories (detected from `deviceType` a
 
 ---
 
+## Möhlenhoff EZR floor-heating controller
+
+OPUS drives a Möhlenhoff Alpha EZR controller as a set of virtual heat areas
+(`device.is_climate`), but it does not pass on what the controller is actually
+doing. `EzrClient` reads that from the controller's own local XML API (port 80,
+no authentication):
+
+- actuator duty cycle per zone (the real valve state)
+- circulation pump and boiler relay
+- whether a zone has lost its room unit
+
+When a zone loses its room unit for longer than `emergency_delay_minutes`, the
+controller runs that zone's actuators at `emergency_heat_percent` **regardless
+of the setpoint**, and switches on the pump and relay.
+
+```python
+from pyopus_smarthome import EzrClient
+
+async def main():
+    ezr = EzrClient("192.168.1.50")
+    status = await ezr.get_status()
+    for zone in status.zones.values():
+        print(zone.number, zone.valve_percent, zone.room_unit_lost)
+    print(status.pump_active, status.relay_active, status.emergency_heat_percent)
+
+    await ezr.set_emergency_heat_percent(0)  # zones that lose their room unit stay off
+    await ezr.close()
+```
+
+To find the controller, and to link its zones to OPUS heat areas: the OPUS
+heat-controller device (`device.is_heat_controller`) reports the controller's
+address in its `ipAddress` state, and each heat area's `device.heatarea_number`
+is the controller zone it maps to.
+
+---
+
 ## API reference
 
 ### `OpusClient`
@@ -124,6 +160,18 @@ OpusClient(host: str, eurid: str, port: int = 8080, session: aiohttp.ClientSessi
 | `await client.get_device_configuration(device_id)` | Raw configuration dict |
 | `await client.close()` | Close the underlying HTTP session |
 
+### `EzrClient`
+
+```python
+EzrClient(host: str, port: int = 80, session: aiohttp.ClientSession | None = None, timeout: float = 10.0)
+```
+
+| Method | Description |
+|--------|-------------|
+| `await ezr.get_status()` | Returns an `EzrStatus` |
+| `await ezr.set_emergency_heat_percent(percent, device_id=None)` | Set the emergency-mode duty cycle (0–100) |
+| `await ezr.close()` | Close the underlying HTTP session |
+
 ### `OpusStream`
 
 ```python
@@ -138,10 +186,12 @@ OpusStream(host, eurid, port=8080, on_devices=None, on_telegram=None, reconnect_
 ### Models
 
 - `Gateway` — gateway system info (`version`, `eurid`, `serial`)
-- `Device` — device with `device_id`, `friendly_id`, `location`, `states: list[DeviceState]`
+- `Device` — device with `device_id`, `friendly_id`, `location`, `states: list[DeviceState]`; heat areas also have `heatarea_number` (the Möhlenhoff zone, from `physical_device`)
 - `DeviceState` — a key/value/unit triplet
 - `Telegram` — incoming radio telegram with `device_id` and `functions: list[TelegramFunction]`
 - `TelegramFunction` — `key` + `value` pair from a telegram
+- `EzrStatus` — controller snapshot: `pump_active`, `relay_active`, `emergency_heat_percent`, `emergency_delay_minutes`, `zones: dict[int, EzrZone]`
+- `EzrZone` — `valve_percent`, `room_unit_lost`, `temperature`, `target_temperature`, `actuators`, `room_units`
 
 ### Auth helpers
 

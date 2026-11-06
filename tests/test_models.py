@@ -31,6 +31,24 @@ def test_device_is_climate(heating_zone_data):
     assert dev.is_climate
     assert not dev.supports_cover_tilt
 
+
+def test_heatarea_number_from_physical_device(heating_zone_data):
+    heating_zone_data["physicalDevice"] = "001122334455_3"
+    dev = Device.from_dict(heating_zone_data)
+    assert dev.physical_device == "001122334455_3"
+    assert dev.heatarea_number == 3
+
+
+def test_heatarea_number_none_without_physical_device(heating_zone_data):
+    dev = Device.from_dict(heating_zone_data)
+    assert dev.physical_device is None
+    assert dev.heatarea_number is None
+
+
+def test_heatarea_number_none_for_malformed_physical_device(heating_zone_data):
+    heating_zone_data["physicalDevice"] = "001122334455_x"
+    assert Device.from_dict(heating_zone_data).heatarea_number is None
+
 def test_telegram_from_dict(telegram_data):
     t = Telegram.from_dict(telegram_data)
     assert t.device_id == "DDEE0001"
